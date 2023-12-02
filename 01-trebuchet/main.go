@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-var calibrationDocument string = "/trebuchet/calibration.txt"
+var calibrationDocument string = "/01-trebuchet/calibration.txt"
 
 func main() {
 
