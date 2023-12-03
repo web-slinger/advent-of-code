@@ -19,60 +19,102 @@ type GameMap map[int][]GameGrab
 var conundrumDocument string = "/02-code-conundrum/conundrum.txt"
 
 func main() {
-
 	wd, err := os.Getwd()
 	if err != nil {
 		panic(err)
 	}
 
-	games, err := getGames(wd + conundrumDocument)
+	gameIdTotals, powerTotals, err := getGameResult(wd + conundrumDocument)
 	if err != nil {
 		panic(err)
 	}
 
-	for gameId, game := range games {
-		fmt.Printf("%d - %+v \n", gameId, game)
-	}
+	fmt.Println(gameIdTotals)
+	fmt.Println(powerTotals)
 }
 
-func getGames(fileName string) (GameMap, error) {
-
+func getGameResult(fileName string) (int, int, error) {
 	f, err := os.Open(fileName)
 	if err != nil {
-		return nil, err
+		return 0, 0, err
 	}
 	defer f.Close()
 
 	games := make(GameMap, 0)
-
-	index := 0
+	gameIdTotals := 0
+	powerTotals := 0
 
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
-		index++
-		gameGrabsString := strings.Split(scanner.Text(), ": ")[1]
 
-		gameId := index + 1
-		gameGrabs := parseGameGrabString(gameGrabsString)
+		game := scanner.Text()
+
+		gameId, gameGrabs, err := parseGameGrabString(game)
+		if err != nil {
+			fmt.Println(err.Error())
+			continue
+		}
+
+		power, valid := validateGameGrabPossible(gameId, gameGrabs)
+		if valid {
+			gameIdTotals += gameId
+		}
+		powerTotals += power
 
 		games[gameId] = gameGrabs
 	}
 
 	err = scanner.Err()
 	if err != nil {
-		return nil, err
+		return 0, 0, err
 	}
 
-	return games, nil
+	return gameIdTotals, powerTotals, nil
 }
 
-func parseGameGrabString(grabString string) []GameGrab {
-	grabs := strings.Split(grabString, "; ")
+func validateGameGrabPossible(gameId int, grabs []GameGrab) (int, bool) {
+	totalGrabs := GameGrab{}
+	for _, grab := range grabs {
+		if grab.Red > totalGrabs.Red {
+			totalGrabs.Red = grab.Red
+		}
+		if grab.Green > totalGrabs.Green {
+			totalGrabs.Green = grab.Green
+		}
+		if grab.Blue > totalGrabs.Blue {
+			totalGrabs.Blue = grab.Blue
+		}
 
-	return parseGameGrab(grabs)
+		// previously added them up not minimum amount
+		// totalGrabs.Red += grab.Red
+		// totalGrabs.Green += grab.Green
+		// totalGrabs.Blue += grab.Blue
+	}
+
+	power := totalGrabs.Red * totalGrabs.Green * totalGrabs.Blue
+
+	if totalGrabs.Red > 12 || totalGrabs.Green > 13 || totalGrabs.Blue > 14 {
+		return power, false
+	}
+	return power, true
 }
 
-func parseGameGrab(gameGrabs []string) []GameGrab {
+func parseGameGrabString(game string) (int, []GameGrab, error) {
+	gameSplit := strings.Split(game, ": ")
+
+	// gameId
+	gameId := strings.Split(gameSplit[0], " ")[1]
+	number, err := strconv.Atoi(gameId)
+	if err != nil {
+		return 0, nil, err
+	}
+
+	// game grabs
+	grabs := strings.Split(gameSplit[1], "; ")
+	return number, parseGameGrabs(grabs), nil
+}
+
+func parseGameGrabs(gameGrabs []string) []GameGrab {
 	grabs := make([]GameGrab, len(gameGrabs))
 
 	for i, grab := range gameGrabs {
@@ -104,11 +146,9 @@ func parseGrabCubes(cubes []string) GameGrab {
 		case "red":
 			grab.Red = number
 		case "blue":
-			grab.Red = number
+			grab.Blue = number
 		case "green":
 			grab.Green = number
-		default:
-			fmt.Println("UNKNOWN CUBE COLOUR - " + cube[1])
 		}
 	}
 
