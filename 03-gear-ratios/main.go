@@ -26,15 +26,27 @@ func main() {
 		panic(err)
 	}
 
-	partNumbers, symbols, err := getGearRatios(wd + gearRatioSchematic)
+	potentialPartNumbers, symbolsMap, err := getPotentialPartNumbersWithSymbols(wd + gearRatioSchematic)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(len(partNumbers))
-	fmt.Println(len(symbols))
+
+	validPartNumbers, validPartNumberTotal, invalidPartNumbers, invalidPartNumberTotal := getValidPartNumbers(potentialPartNumbers, symbolsMap)
+
+	fmt.Printf("validPartNumberTotal %d\n", validPartNumberTotal)
+	fmt.Printf("invalidPartNumberTotal %d\n", invalidPartNumberTotal)
+
+	fmt.Printf("invalidPartNumbers %d\n", len(invalidPartNumbers))
+	fmt.Printf("validPartNumbers %d\n", len(validPartNumbers))
+	fmt.Printf("potentialPartNumbers %d\n", len(potentialPartNumbers))
+
+	fmt.Println("INVALID")
+	for _, part := range invalidPartNumbers {
+		fmt.Printf("Line %d, Number %d\n", part.LineNumber, part.Number)
+	}
 }
 
-func getGearRatios(fileName string) ([]PotentialPartNumber, SymbolsMap, error) {
+func getPotentialPartNumbersWithSymbols(fileName string) ([]PotentialPartNumber, SymbolsMap, error) {
 	f, err := os.Open(fileName)
 	if err != nil {
 		return nil, nil, err
@@ -101,7 +113,7 @@ func getPotentialPartNumbersForLine(line string, lineIndex int) ([]PotentialPart
 			ppn = append(ppn, PotentialPartNumber{
 				Number:     number,
 				LineNumber: lineIndex,
-				StartIndex: i - 1 - (len(partNumberBuffer)),
+				StartIndex: i - (len(partNumberBuffer)),
 				EndIndex:   i - 1,
 			})
 		}
@@ -114,7 +126,14 @@ func getPotentialPartNumbersForLine(line string, lineIndex int) ([]PotentialPart
 	return ppn, symbolMap
 }
 
-func isValidSymbol(potentialPartNumbers []PotentialPartNumber, symbolMap SymbolsMap) int {
+func getValidPartNumbers(potentialPartNumbers []PotentialPartNumber, symbolMap SymbolsMap) ([]PotentialPartNumber, int, []PotentialPartNumber, int) {
+
+	validPartNumbers := []PotentialPartNumber{}
+	invalidPartNumbers := []PotentialPartNumber{}
+	validPartNumberTotal := 0
+	invalidPartNumberTotal := 0
+	potentialPartNumberTotal := 0
+
 	// if line 1 check left, right, down, diag (dr dl)
 
 	// check left right up down all diag (dr dl ur ul)
@@ -122,5 +141,74 @@ func isValidSymbol(potentialPartNumbers []PotentialPartNumber, symbolMap Symbols
 	// if last line check left, right, up, diag (ur ul)
 
 	// only check 1 index away not multiple diags/ups/downs
-	return 0
+
+	var found bool
+	var key string
+	var ok bool
+
+	for _, part := range potentialPartNumbers {
+
+		potentialPartNumberTotal += part.Number
+
+		indexesToCheck := len(fmt.Sprintf("%d", part.Number)) + 2
+		if part.StartIndex > 0 {
+			// same line check left
+			key = fmt.Sprintf("%d_%d", part.LineNumber, part.StartIndex-1)
+			_, ok = symbolMap[key]
+			if ok {
+				validPartNumbers = append(validPartNumbers, part)
+				validPartNumberTotal += part.Number
+				continue
+			}
+		}
+
+		// same line check right
+		key = fmt.Sprintf("%d_%d", part.LineNumber, part.EndIndex+1)
+		_, ok = symbolMap[key]
+		if ok {
+			validPartNumbers = append(validPartNumbers, part)
+			validPartNumberTotal += part.Number
+			continue
+		}
+
+		found = false
+
+		for i := 0; i < indexesToCheck; i++ {
+
+			if part.StartIndex == 0 && i == 0 {
+				continue
+			}
+
+			if part.LineNumber > 0 {
+				// previous line check
+				key = fmt.Sprintf("%d_%d", part.LineNumber-1, (part.StartIndex-1)+i)
+				_, ok = symbolMap[key]
+				if ok {
+					validPartNumbers = append(validPartNumbers, part)
+					validPartNumberTotal += part.Number
+					found = true
+					break
+				}
+			}
+
+			// next line check
+			key = fmt.Sprintf("%d_%d", part.LineNumber+1, (part.StartIndex-1)+i)
+			_, ok = symbolMap[key]
+			if ok {
+				validPartNumbers = append(validPartNumbers, part)
+				validPartNumberTotal += part.Number
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			invalidPartNumbers = append(invalidPartNumbers, part)
+			invalidPartNumberTotal += part.Number
+		}
+	}
+
+	fmt.Printf("potentialPartNumberTotal - %d\n", potentialPartNumberTotal)
+
+	return validPartNumbers, validPartNumberTotal, invalidPartNumbers, invalidPartNumberTotal
 }
