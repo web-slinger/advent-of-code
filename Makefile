@@ -6,3 +6,6 @@ day-2:
 
 day-3:
 	@go run 03-gear-ratios/main.go
+
+day-4:
+	@go run 04-scratchcards/main.go

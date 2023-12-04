@@ -1,27 +1,28 @@
 package helpers
 
 import (
+	"bufio"
 	"os"
 )
 
-func OpenFile(fileName string) (*os.File, error) {
+func GetFileLines(fileName string) ([]string, error) {
 	f, err := os.Open(fileName)
 	if err != nil {
 		return nil, err
 	}
 	defer f.Close()
 
-	// calibrationLines := make([]string, 0)
+	result := []string{}
 
-	// scanner := bufio.NewScanner(f)
-	// for scanner.Scan() {
-	// 	line := scanner.Text()
-	// 	calibrationLines = append(calibrationLines, line)
-	// }
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		result = append(result, scanner.Text())
+	}
 
-	// err = scanner.Err()
-	// if err != nil {
-	// 	return nil, err
-	// }
-	return f, nil
+	err = scanner.Err()
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }
