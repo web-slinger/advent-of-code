@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -16,39 +17,41 @@ func main() {
 		panic(err)
 	}
 
-	points, err := getScratchcardPointsFromFile(wd + scratchcardDocument)
+	points, numberOfScratchcards, err := getScratchcardPointsFromFile(wd + scratchcardDocument)
 	if err != nil {
 		panic(err)
 	}
 
 	fmt.Println(points)
+	fmt.Println(numberOfScratchcards)
 }
 
-func getScratchcardPointsFromFile(fileName string) (int, error) {
+func getScratchcardPointsFromFile(fileName string) (int, int, error) {
 	lines, err := helpers.GetFileLines(fileName)
 	if err != nil {
-		return 0, err
+		return 0, 0, err
 	}
 
 	return getScratchcardPoints(lines)
 }
 
-func getScratchcardPoints(lines []string) (int, error) {
+func getScratchcardPoints(lines []string) (int, int, error) {
 
 	totalScratchcardPoints := 0
+	numberOfScratchcards := 0
 
-	for _, line := range lines {
+	scratchMatches := map[int]int{}
 
-		card := strings.Split(line, ": ")
+	for i := 0; i < len(lines); i++ {
+
+		card := strings.Split(lines[i], ": ")
 		if len(card) != 2 {
-			return 0, fmt.Errorf("expected card format split by ': '")
+			return 0, 0, fmt.Errorf("expected card format split by ': '")
 		}
-
-		//cardId := i + 1 // can use card to get the card number
 
 		play := strings.Split(card[1], " | ")
 		if len(play) != 2 {
-			return 0, fmt.Errorf("expected play format split by ' | '")
+			return 0, 0, fmt.Errorf("expected play format split by ' | '")
 		}
 
 		scratchcard := play[0]
@@ -74,9 +77,37 @@ func getScratchcardPoints(lines []string) (int, error) {
 		}
 		totalScratchcardPoints += scratchcardPoints
 		fmt.Printf("%s - %d winning numbers, points %d\n", card[0], matches, scratchcardPoints)
+
+		if matches > 0 {
+			cardNumber, _ := strconv.Atoi(strings.Split(card[0], " ")[1])
+			scratchMatches[cardNumber] = matches
+			// some logic to either push same scratchcard into lines or keep a map of card and no of copies
+		}
 	}
 
-	return totalScratchcardPoints, nil
+	scratchCopies := map[int]int{}
+
+	for key, count := range scratchMatches {
+		copies, ok := scratchCopies[key]
+		if !ok {
+			scratchCopies[key] = 0
+		}
+		copies += 1
+		scratchCopies[key] = copies
+
+		for i := 1; i <= count; i++ {
+			copies, ok := scratchCopies[key+i]
+			if !ok {
+				scratchCopies[key+i] = 0
+			}
+			scratchCopies[key+i] = copies + 1
+		}
+	}
+
+	fmt.Printf("scratchMatches - %+v\n", scratchMatches)
+	fmt.Printf("scratchCopies - %+v\n", scratchCopies)
+
+	return totalScratchcardPoints, numberOfScratchcards, nil
 }
 
 /*

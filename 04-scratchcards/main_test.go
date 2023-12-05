@@ -14,11 +14,12 @@ func TestExampleFile(t *testing.T) {
 		panic(err)
 	}
 
-	points, err := getScratchcardPointsFromFile(wd + "/test.txt")
+	points, scratchCardNumbers, err := getScratchcardPointsFromFile(wd + "/test.txt")
 	if err != nil {
 		panic(err)
 	}
 
 	require.NoError(t, err)
 	assert.Equal(t, 13, points)
+	assert.Equal(t, 30, scratchCardNumbers)
 }
