@@ -9,3 +9,6 @@ day-3:
 
 day-4:
 	@go run 04-scratchcards/main.go
+
+day-5:
+	@go run 05-almanac/main.go
