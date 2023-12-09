@@ -11,7 +11,7 @@ import (
 
 var almanacGitDocument string = "/05-almanac/almanac.txt"
 
-func main() {
+func main2() {
 	wd, err := os.Getwd()
 	if err != nil {
 		panic(err)
